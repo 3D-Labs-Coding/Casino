@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Necrotic's Vaulturon</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+body {
+  margin:0; font-family:sans-serif; background:#0b0f1a; color:#fff; display:flex; justify-content:center; align-items:center; min-height:100vh;
+}
+#app { text-align:center; width:100%; max-width:600px; padding:20px; }
+.hidden { display:none; }
+button,input,select { padding:10px; margin:6px; border-radius:6px; border:none; cursor:pointer; font-weight:bold; }
+.panel { background:rgba(20,20,40,0.95); border-radius:16px; padding:20px; margin:auto; margin-top:15px; }
+.balance { margin-bottom:20px; font-size:18px; color:#9affc9; }
+#menu button { width:160px; }
+#wheel { width:180px; height:180px; border-radius:50%; border:8px solid #333; margin:15px auto;
+  background: conic-gradient(green 0deg 10deg, red 10deg 190deg, black 190deg 360deg);
+  transition: transform 4s cubic-bezier(.2,.8,.2,1);
+}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <h1 style="font-family:Orbitron;">Necrotic's Vaulturon</h1>
+
+  <!-- VAULT MENU -->
+  <div id="vaultMenu" class="panel">
+    <p>Welcome to the Vault</p>
+    <button onclick="newVault()">New Vault</button>
+    <button onclick="showLoadVault()">Load Vault</button>
+  </div>
+
+  <!-- LOAD VAULT -->
+  <div id="loadVaultPanel" class="panel hidden">
+    <p>Enter your previous balance:</p>
+    <input type="number" id="loadMoney" placeholder="e.g., 1000"><br>
+    <button onclick="loadVault()">Load Vault</button>
+  </div>
+
+  <!-- MAIN GAME -->
+  <div id="mainGame" class="hidden">
+    <div class="balance">CREDITS: $<span id="money">0</span></div>
+    <div id="menu">
+      <button onclick="show('roulette')">Crimson Wheel</button>
+      <button onclick="show('slots')">Neon Reels</button>
+      <button onclick="show('blackjack')">Shadow Blackjack</button>
+    </div>
+
+    <!-- ROULETTE -->
+    <div id="roulette" class="panel hidden">
+      <h2>Crimson Wheel</h2>
+      <div id="wheel"></div>
+      Bet: <input id="rBet" type="number" value="100"><br>
+      Number (0–36): <input id="rNum" type="number"><br>
+      Color:
+      <select id="rColor">
+        <option value="">None</option>
+        <option>red</option>
+        <option>black</option>
+        <option>green</option>
+      </select><br>
+      <button onclick="spinWheel()">Spin</button>
+      <div id="rResult"></div>
+      <button onclick="back()">Return</button>
+    </div>
+
+    <!-- SLOTS -->
+    <div id="slots" class="panel hidden">
+      <h2>Neon Reels</h2>
+      Bet: <input id="sBet" type="number" value="50"><br>
+      <div id="slotDisplay" style="font-size:42px;margin:15px">7 7 7</div>
+      <button onclick="spinSlots()">Pull</button>
+      <div id="sResult"></div>
+      <button onclick="back()">Return</button>
+    </div>
+
+    <!-- BLACKJACK -->
+    <div id="blackjack" class="panel hidden">
+      <h2>Shadow Blackjack</h2>
+      Bet: <input id="bBet" type="number" value="100"><br><br>
+      <button onclick="deal()">Deal</button><br><br>
+      <h3>Player</h3><div id="player"></div>
+      <h3>Dealer</h3><div id="dealer"></div>
+      <button onclick="hit()" id="hitBtn" disabled>Hit</button>
+      <button onclick="stand()" id="standBtn" disabled>Stand</button>
+      <div id="bjResult"></div>
+      <button onclick="back()">Return</button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const moneyEl = document.getElementById("money");
+let money = 0;
+
+const mainGameEl = document.getElementById("mainGame");
+const vaultMenu = document.getElementById("vaultMenu");
+const loadVaultPanel = document.getElementById("loadVaultPanel");
+const menu = document.getElementById("menu");
+
+// ===== Vault System =====
+function newVault() {
+    money = 1000;
+    update();
+    vaultMenu.classList.add("hidden");
+    mainGameEl.classList.remove("hidden");
+    save();
+}
+
+function showLoadVault() {
+    vaultMenu.classList.add("hidden");
+    loadVaultPanel.classList.remove("hidden");
+}
+
+function loadVault() {
+    const val = +document.getElementById("loadMoney").value;
+    if (val > 0) money = val;
+    update();
+    loadVaultPanel.classList.add("hidden");
+    mainGameEl.classList.remove("hidden");
+    save();
+}
+
+function save(){ localStorage.setItem("vaulturonMoney", money); }
+function update(){ moneyEl.textContent = money; save(); }
+
+// ===== Panel Navigation =====
+function show(id){
+    menu.classList.add("hidden");
+    document.querySelectorAll(".panel").forEach(p=>p.classList.add("hidden"));
+    document.getElementById(id).classList.remove("hidden");
+}
+function back(){
+    menu.classList.remove("hidden");
+    document.querySelectorAll(".panel").forEach(p=>p.classList.add("hidden"));
+}
+
+// ===== ROULETTE =====
+const wheel = document.getElementById("wheel");
+function spinWheel(){
+    let bet=+rBet.value;
+    if(money<bet||bet<=0)return;
+    money-=bet;update();
+
+    let num=Math.floor(Math.random()*37);
+    let color=num===0?"green":num%2?"red":"black";
+
+    let rot=1440+Math.random()*720;
+    wheel.style.transform=`rotate(${rot}deg)`;
+
+    setTimeout(()=>{
+        let win=0;
+        if(+rNum.value===num)win+=bet*35;
+        if(rColor.value===color)win+=color==="green"?bet*14:bet*2;
+        money+=win;update();
+        rResult.textContent=`${num} ${color.toUpperCase()} ${win?"WIN +"+win:"LOST"}`;
+    },4000);
+}
+
+// ===== SLOTS =====
+const sy=["🪙","🍀","🩷"];
+function spinSlots(){
+    let bet=+sBet.value;
+    if(money<bet||bet<=0)return;
+    money-=bet;update();
+    let spins=0;
+    let i=setInterval(()=>{
+        slotDisplay.textContent=
+            sy[Math.floor(Math.random()*3)]+" "+
+            sy[Math.floor(Math.random()*3)]+" "+
+            sy[Math.floor(Math.random()*3)];
+        if(++spins>15){ clearInterval(i); resolveSlots(bet); }
+    },80);
+}
+
+function resolveSlots(bet){
+    let[a,b,c]=slotDisplay.textContent.split(" ");
+    let win=0;
+    if(a===b&&b===c) win = a==="7"?bet*10:bet*5;
+    else if(a===b||a===c||b===c) win = bet*2;
+    money+=win;update();
+    sResult.textContent=win?"WIN +"+win:"NO MATCH";
+}
+
+// ===== BLACKJACK =====
+let deck=[],p=[],d=[],hide=true;
+const playerEl=document.getElementById("player");
+const dealerEl=document.getElementById("dealer");
+const hitBtn=document.getElementById("hitBtn");
+const standBtn=document.getElementById("standBtn");
+const bjResult=document.getElementById("bjResult");
+
+function deal(){
+    let bet=+bBet.value;
+    if(money<bet||bet<=0)return;
+    money-=bet;update();
+
+    deck=[];
+    for(let i=2;i<=11;i++) for(let j=0;j<4;j++) deck.push(i);
+    deck.sort(()=>Math.random()-0.5);
+
+    p=[deck.pop(),deck.pop()];
+    d=[deck.pop(),deck.pop()];
+    hide=true;
+    renderBJ();
+    hitBtn.disabled=standBtn.disabled=false;
+    bjResult.textContent="";
+}
+
+function renderBJ(){
+    playerEl.textContent=p.join(" ");
+    dealerEl.textContent=d.map((c,i)=>i==1&&hide?"?":c).join(" ");
+}
+
+function val(hand){
+    let t=hand.reduce((a,b)=>a+b,0);
+    let aces=hand.filter(x=>x===11).length;
+    while(t>21 && aces--) t-=10;
+    return t;
+}
+
+function hit(){
+    p.push(deck.pop());
+    renderBJ();
+    if(val(p)>21) endBJ("BUST");
+}
+
+function stand(){
+    hide=false;
+    renderBJ();
+    setTimeout(drawDealer,500);
+}
+
+function drawDealer(){
+    if(val(d)<17){ d.push(deck.pop()); renderBJ(); setTimeout(drawDealer,500); }
+    else endBJ(val(p)>=val(d)||val(d)>21?"WIN":"LOSE");
+}
+
+function endBJ(msg){
+    hitBtn.disabled=standBtn.disabled=true;
+    if(msg==="WIN") money+=+bBet.value*2;
+    update();
+    bjResult.textContent=msg;
+}
+</script>
+
+</body>
+</html>
